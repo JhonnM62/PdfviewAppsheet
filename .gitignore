@@ -1,5 +1,5 @@
 # Dependency directories
-node_modules/
+node_modules
 
 # Logs
 logs
@@ -21,7 +21,7 @@ tmp/
 
 # Converted PDFs and images
 
-images/
+
 
 # Operating System files
 .DS_Store
