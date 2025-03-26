@@ -40,15 +40,14 @@ app.post("/convert-pdf-to-images", async (req, res) => {
     const pdfPath = path.join(conversionDir, "original.pdf");
     await fs.writeFile(pdfPath, pdfResponse.data);
 
-    // Configuración de conversión con pdf2pic
-    // Se aumenta la densidad y el ancho para obtener mejor calidad
+    // Configuración de conversión con pdf2pic sin forzar ancho fijo
     const options = {
-      density: 300, // Incrementa la resolución (dpi)
+      density: 300, // Alta densidad para mejorar la calidad (dpi)
       saveFilename: "page",
       savePath: conversionDir,
       format: "png",
-      width: 1200, // Ancho mayor para mayor detalle
       quality: 100, // Calidad máxima
+      // Al omitir 'width', se usan las dimensiones originales del PDF
     };
 
     // Convertir todas las páginas del PDF a imágenes
