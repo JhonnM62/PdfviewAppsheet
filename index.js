@@ -2,7 +2,7 @@ const express = require("express");
 const axios = require("axios");
 const fs = require("fs").promises;
 const path = require("path");
-const { convertPdf } = require("pdf2image");
+const { convert } = require("pdf-poppler");
 const { v4: uuidv4 } = require("uuid");
 
 const app = express();
@@ -40,25 +40,37 @@ app.post("/convert-pdf-to-images", async (req, res) => {
     const pdfPath = path.join(conversionDir, "original.pdf");
     await fs.writeFile(pdfPath, pdfResponse.data);
 
-    // Convertir PDF a imágenes
-    const options = {
+    // Configuración de conversión
+    const opts = {
       format: "png",
-      width: 2000,
-      height: 2000,
-      outputFolder: conversionDir,
-      outputFileName: "page_",
+      out_dir: conversionDir,
+      outprefix: "page",
+      page: null, // Convierte todas las páginas
     };
 
-    const result = await convertPdf(pdfPath, options);
+    // Convertir PDF a imágenes
+    await convert(pdfPath, opts);
 
-    // Leer archivos generados
+    // Leer archivos generados y renombrar
     const imageFiles = await fs.readdir(conversionDir);
     const pngImages = imageFiles.filter(
-      (file) => file.endsWith(".png") && file.startsWith("page_")
+      (file) => file.endsWith(".png") && file.startsWith("page")
+    );
+
+    // Renombrar archivos para eliminar el guión (si existe)
+    const renamedImages = await Promise.all(
+      pngImages.map(async (oldName) => {
+        const newName = oldName.replace("page-", "page_");
+        await fs.rename(
+          path.join(conversionDir, oldName),
+          path.join(conversionDir, newName)
+        );
+        return newName;
+      })
     );
 
     // Generar URLs locales para las imágenes
-    const localImageUrls = pngImages.map(
+    const localImageUrls = renamedImages.map(
       (imageName) =>
         `${req.protocol}://${req.get(
           "host"
