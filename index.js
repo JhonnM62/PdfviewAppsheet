@@ -2,7 +2,7 @@ const express = require("express");
 const axios = require("axios");
 const fs = require("fs").promises;
 const path = require("path");
-const { PDFImage } = require("pdf-image");
+const { fromPath } = require("pdf2pic");
 const { v4: uuidv4 } = require("uuid");
 
 const app = express();
@@ -42,22 +42,18 @@ app.post("/convert-pdf-to-images", async (req, res) => {
 
     // Configuración de conversión
     const convertPdfToImages = async (pdfPath) => {
-      const pdfImage = new PDFImage(pdfPath, {
-        outputDirectory: conversionDir,
-        fileName: "page_",
-        convertOptions: {
-          "-density": "300",
-          "-quality": "90",
-        },
+      const convert = fromPath(pdfPath, {
+        density: 300,
+        saveFilename: "page_",
+        savePath: conversionDir,
+        format: "png",
+        width: 1024,
+        height: 1024,
       });
 
-      try {
-        const imagePaths = await pdfImage.convertAll();
-        return imagePaths;
-      } catch (error) {
-        console.error("Error en conversión:", error);
-        throw error;
-      }
+      // Convertir todas las páginas
+      const pages = await convert();
+      return pages.map((page) => page.path);
     };
 
     // Convertir PDF a imágenes
