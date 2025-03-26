@@ -2,58 +2,14 @@ const express = require("express");
 const axios = require("axios");
 const fs = require("fs").promises;
 const path = require("path");
-const { PDFDocument } = require("pdf-lib");
-const sharp = require("sharp");
+const { fromBuffer } = require("pdf2pic");
 const { v4: uuidv4 } = require("uuid");
-const pdf2img = require("pdf2img");
-
-// __dirname ya está definido en CommonJS
-// No es necesario redefinirlo
 
 const app = express();
 app.use(express.json());
 
 // Servir archivos estáticos para que las imágenes sean accesibles
 app.use("/images", express.static(path.join(__dirname, "converted-pdfs")));
-
-// Función para convertir un PDF a imágenes usando pdf2img
-function convertPDFToImages(pdfPath, outputDir) {
-  return new Promise((resolve, reject) => {
-    // Configurar opciones de conversión
-    const options = {
-      type: "png", // Tipo de imagen de salida
-      size: 1024, // Tamaño de la imagen (ancho en píxeles)
-      density: 150, // Densidad de la imagen (DPI)
-      outputdir: outputDir, // Directorio de salida
-      outputname: "page", // Prefijo del nombre de archivo
-      page: null, // Convertir todas las páginas (null)
-    };
-
-    try {
-      // Convertir PDF a imágenes - pdf2img.convert no acepta un callback como tercer parámetro
-      // en algunas versiones, así que usamos el método correcto
-      const converter = pdf2img.convert(pdfPath, options);
-
-      // Registrar el callback para manejar la conversión
-      converter.on("page", (page) => {
-        console.log(`Página ${page.page} convertida a ${page.name}`);
-      });
-
-      converter.on("error", (err) => {
-        console.error("Error en la conversión de PDF:", err);
-        reject(err);
-      });
-
-      converter.on("end", (info) => {
-        console.log("Conversión finalizada con éxito");
-        resolve(info);
-      });
-    } catch (error) {
-      console.error("Error al iniciar la conversión:", error);
-      reject(error);
-    }
-  });
-}
 
 app.post("/convert-pdf-to-images", async (req, res) => {
   try {
@@ -80,49 +36,30 @@ app.post("/convert-pdf-to-images", async (req, res) => {
       responseType: "arraybuffer",
     });
 
-    // Guardar PDF temporalmente
-    const pdfPath = path.join(conversionDir, "original.pdf");
-    await fs.writeFile(pdfPath, pdfResponse.data);
+    // Configuración de conversión
+    const options = {
+      density: 300,
+      saveFilename: "page",
+      savePath: conversionDir,
+      format: "png",
+      width: 2000,
+      height: 2000,
+    };
 
-    // Cargar el PDF con pdf-lib para obtener información
-    const pdfBytes = pdfResponse.data;
-    const pdfDoc = await PDFDocument.load(pdfBytes);
-    const pageCount = pdfDoc.getPageCount();
+    // Convertir PDF a imágenes
+    const convert = fromBuffer(pdfResponse.data, options);
+    const pageConverted = await convert.bulk(-1); // Convierte todas las páginas
 
-    console.log(`El PDF tiene ${pageCount} páginas`);
+    // Generar URLs locales para las imágenes
+    const localImageUrls = pageConverted.map(
+      (page) =>
+        `${req.protocol}://${req.get(
+          "host"
+        )}/images/${conversionId}/${path.basename(page.path)}`
+    );
 
-    // Convertir PDF a imágenes usando pdf2img
-    try {
-      const conversionInfo = await convertPDFToImages(pdfPath, conversionDir);
-      console.log("Conversión completada:", conversionInfo);
-
-      // Leer archivos generados
-      const imageFiles = await fs.readdir(conversionDir);
-      const pngImages = imageFiles.filter(
-        (file) => file.endsWith(".png") && file.startsWith("page")
-      );
-
-      if (pngImages.length === 0) {
-        throw new Error("No se generaron imágenes durante la conversión");
-      }
-
-      // Generar URLs locales para las imágenes
-      const localImageUrls = pngImages.map(
-        (imageName) =>
-          `${req.protocol}://${req.get(
-            "host"
-          )}/images/${conversionId}/${imageName}`
-      );
-
-      // Responder con las URLs como string plano separado por comas
-      res.send(localImageUrls.join(","));
-    } catch (conversionError) {
-      console.error(
-        "Error en la conversión de PDF a imágenes:",
-        conversionError
-      );
-      throw conversionError;
-    }
+    // Responder con las URLs como string plano separado por comas
+    res.send(localImageUrls.join(","));
   } catch (error) {
     console.error("Error en la conversión:", error);
     res.status(500).send("Ocurrió un error al procesar el PDF");
