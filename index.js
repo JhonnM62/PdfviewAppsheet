@@ -7,8 +7,8 @@ const sharp = require("sharp");
 const { v4: uuidv4 } = require("uuid");
 const pdf2img = require("pdf2img");
 
-// Definir __dirname para compatibilidad
-const __dirname = path.resolve();
+// __dirname ya está definido en CommonJS
+// No es necesario redefinirlo
 
 const app = express();
 app.use(express.json());
