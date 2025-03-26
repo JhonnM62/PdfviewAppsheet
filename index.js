@@ -2,11 +2,13 @@ const express = require("express");
 const axios = require("axios");
 const fs = require("fs").promises;
 const path = require("path");
-const { fromBuffer } = require("pdf2pic");
+const { Poppler } = require("node-poppler");
 const { v4: uuidv4 } = require("uuid");
 
 const app = express();
 app.use(express.json());
+
+const poppler = new Poppler();
 
 // Servir archivos estáticos para que las imágenes sean accesibles
 app.use("/images", express.static(path.join(__dirname, "converted-pdfs")));
@@ -14,8 +16,6 @@ app.use("/images", express.static(path.join(__dirname, "converted-pdfs")));
 app.post("/convert-pdf-to-images", async (req, res) => {
   try {
     const { pdfUrl } = req.body;
-
-    // Validar que se proporcione la URL del PDF
     if (!pdfUrl) {
       return res.status(400).send("Se requiere la URL del PDF");
     }
@@ -24,7 +24,7 @@ app.post("/convert-pdf-to-images", async (req, res) => {
     const outputDir = path.join(__dirname, "converted-pdfs");
     await fs.mkdir(outputDir, { recursive: true });
 
-    // Generar un ID único para esta conversión
+    // Generar un ID único para la conversión
     const conversionId = uuidv4();
     const conversionDir = path.join(outputDir, conversionId);
     await fs.mkdir(conversionDir);
@@ -35,30 +35,49 @@ app.post("/convert-pdf-to-images", async (req, res) => {
       url: pdfUrl,
       responseType: "arraybuffer",
     });
+    const pdfPath = path.join(conversionDir, "original.pdf");
+    await fs.writeFile(pdfPath, pdfResponse.data);
 
-    // Configuración de conversión
-    const options = {
-      density: 300,
-      saveFilename: "page",
-      savePath: conversionDir,
-      format: "png",
-      width: 2000,
-      height: 2000,
+    // Configuración de la conversión con node-poppler
+    // Se generarán archivos con el prefijo "page", ej: page-1.png, page-2.png, etc.
+    const opts = {
+      pngFile: true, // Genera salida en formato PNG
+      singleFile: false, // Convierte todas las páginas del PDF
+      firstPageToConvert: 1, // Primera página a convertir
+      lastPageToConvert: 0, // 0 significa hasta la última página
+      // Puedes agregar más opciones según la documentación de node-poppler
     };
 
-    // Convertir PDF a imágenes
-    const convert = fromBuffer(pdfResponse.data, options);
-    const pageConverted = await convert.bulk(-1); // Convierte todas las páginas
+    // Convertir PDF a imágenes. El segundo parámetro es la ruta base para los archivos de salida.
+    await poppler.pdfToCairo(pdfPath, path.join(conversionDir, "page"), opts);
 
-    // Generar URLs locales para las imágenes
-    const localImageUrls = pageConverted.map(
-      (page) =>
-        `${req.protocol}://${req.get(
-          "host"
-        )}/images/${conversionId}/${path.basename(page.path)}`
+    // Listar los archivos generados, filtrando solo los PNG con el prefijo "page"
+    const files = await fs.readdir(conversionDir);
+    const pngImages = files.filter(
+      (file) => file.endsWith(".png") && file.startsWith("page")
     );
 
-    // Responder con las URLs como string plano separado por comas
+    // Opcional: renombrar los archivos para cambiar el guión por un guion bajo, si lo deseas.
+    const renamedImages = await Promise.all(
+      pngImages.map(async (oldName) => {
+        const newName = oldName.replace("page-", "page_");
+        await fs.rename(
+          path.join(conversionDir, oldName),
+          path.join(conversionDir, newName)
+        );
+        return newName;
+      })
+    );
+
+    // Generar URLs locales para las imágenes
+    const localImageUrls = renamedImages.map(
+      (imageName) =>
+        `${req.protocol}://${req.get(
+          "host"
+        )}/images/${conversionId}/${imageName}`
+    );
+
+    // Responder con las URLs separadas por comas
     res.send(localImageUrls.join(","));
   } catch (error) {
     console.error("Error en la conversión:", error);
