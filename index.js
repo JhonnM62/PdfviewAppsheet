@@ -14,8 +14,6 @@ app.use("/images", express.static(path.join(__dirname, "converted-pdfs")));
 app.post("/convert-pdf-to-images", async (req, res) => {
   try {
     const { pdfUrl } = req.body;
-
-    // Validar que se proporcione la URL del PDF
     if (!pdfUrl) {
       return res.status(400).send("Se requiere la URL del PDF");
     }
@@ -24,7 +22,7 @@ app.post("/convert-pdf-to-images", async (req, res) => {
     const outputDir = path.join(__dirname, "converted-pdfs");
     await fs.mkdir(outputDir, { recursive: true });
 
-    // Generar un ID único para esta conversión
+    // Generar un ID único para la conversión
     const conversionId = uuidv4();
     const conversionDir = path.join(outputDir, conversionId);
     await fs.mkdir(conversionDir);
@@ -35,16 +33,22 @@ app.post("/convert-pdf-to-images", async (req, res) => {
       url: pdfUrl,
       responseType: "arraybuffer",
     });
-
-    // Guardar PDF temporalmente
     const pdfPath = path.join(conversionDir, "original.pdf");
     await fs.writeFile(pdfPath, pdfResponse.data);
 
     // Convertir el PDF a imágenes usando pdf-image
     const pdfImage = new PDFImage(pdfPath, { outputDirectory: conversionDir });
-    const imagePaths = await pdfImage.convertFile();
+    // Obtener el número de páginas del PDF
+    const numPages = await pdfImage.numberOfPages();
 
-    // Extraer nombres de archivo (ya que imagePaths trae las rutas completas)
+    // Convertir cada página a imagen
+    const convertPromises = [];
+    for (let i = 0; i < numPages; i++) {
+      convertPromises.push(pdfImage.convertPage(i));
+    }
+    const imagePaths = await Promise.all(convertPromises);
+
+    // Extraer nombres de archivo de las rutas completas
     const imageFiles = imagePaths.map((fullPath) => path.basename(fullPath));
 
     // Generar URLs locales para las imágenes
