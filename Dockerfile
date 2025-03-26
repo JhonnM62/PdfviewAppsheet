@@ -1,20 +1,17 @@
-# Usar una imagen base oficial de Node.js con Alpine (ligera)
-FROM node:20-alpine
-
-# Establecer directorio de trabajo en el contenedor
+FROM node:18-bullseye as bot
+# Establece el directorio de trabajo en el contenedor
 WORKDIR /app
 
-# Copiar package.json y package-lock.json
+# Copia los archivos de tu proyecto al contenedor
 COPY package*.json ./
 
-# Instalar dependencias
+# Instala las dependencias del proyecto
 RUN npm install
 
-# Copiar todos los archivos del proyecto
+# Copia el resto de los archivos del proyecto al contenedor
 COPY . .
 
-# Exponer el puerto en el que corre la aplicación
-EXPOSE 3000
 
-# Comando para ejecutar la aplicación
+
+# Comando para iniciar tu aplicación Node.js
 CMD ["node", "index.js"]
