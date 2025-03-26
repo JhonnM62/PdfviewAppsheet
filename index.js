@@ -2,7 +2,7 @@ const express = require("express");
 const axios = require("axios");
 const fs = require("fs").promises;
 const path = require("path");
-const { convert } = require("pdf-poppler");
+const { PDFImage } = require("pdf-image");
 const { v4: uuidv4 } = require("uuid");
 
 const app = express();
@@ -41,36 +41,36 @@ app.post("/convert-pdf-to-images", async (req, res) => {
     await fs.writeFile(pdfPath, pdfResponse.data);
 
     // Configuración de conversión
-    const opts = {
-      format: "png",
-      out_dir: conversionDir,
-      out_prefix: "page_",
-      page: null, // Convierte todas las páginas
+    const convertPdfToImages = async (pdfPath) => {
+      const pdfImage = new PDFImage(pdfPath, {
+        outputDirectory: conversionDir,
+        fileName: "page_",
+        convertOptions: {
+          "-density": "300",
+          "-quality": "90",
+        },
+      });
+
+      try {
+        const imagePaths = await pdfImage.convertAll();
+        return imagePaths;
+      } catch (error) {
+        console.error("Error en conversión:", error);
+        throw error;
+      }
     };
 
     // Convertir PDF a imágenes
-    await convert(pdfPath, opts);
+    const imagePaths = await convertPdfToImages(pdfPath);
 
-    // Leer archivos generados y renombrar
+    // Leer archivos generados
     const imageFiles = await fs.readdir(conversionDir);
     const pngImages = imageFiles.filter(
       (file) => file.endsWith(".png") && file.startsWith("page_")
     );
 
-    // Renombrar archivos para eliminar el guión
-    const renamedImages = await Promise.all(
-      pngImages.map(async (oldName) => {
-        const newName = oldName.replace("page_-", "page_");
-        await fs.rename(
-          path.join(conversionDir, oldName),
-          path.join(conversionDir, newName)
-        );
-        return newName;
-      })
-    );
-
     // Generar URLs locales para las imágenes
-    const localImageUrls = renamedImages.map(
+    const localImageUrls = pngImages.map(
       (imageName) =>
         `${req.protocol}://${req.get(
           "host"

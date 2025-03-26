@@ -17,7 +17,7 @@
   "dependencies": {
     "axios": "^1.8.4",
     "express": "^4.21.2",
-    "pdf-poppler": "^0.2.1",
+    "pdf-image": "^2.0.0",
     "uuid": "^11.1.0"
   }
 }
