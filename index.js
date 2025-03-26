@@ -40,29 +40,23 @@ app.post("/convert-pdf-to-images", async (req, res) => {
     const pdfPath = path.join(conversionDir, "original.pdf");
     await fs.writeFile(pdfPath, pdfResponse.data);
 
-    // Configuración de conversión
-    const convertPdfToImages = async (pdfPath) => {
-      const convert = fromPath(pdfPath, {
-        density: 300,
-        saveFilename: "page_",
-        savePath: conversionDir,
-        format: "png",
-        width: 1024,
-        height: 1024,
-      });
-
-      // Convertir todas las páginas
-      const pages = await convert();
-      return pages.map((page) => page.path);
+    // Configuración de conversión con pdf2pic
+    const options = {
+      density: 100,
+      saveFilename: "page",
+      savePath: conversionDir,
+      format: "png",
+      width: 600, // Ajusta el ancho según necesites
     };
 
-    // Convertir PDF a imágenes
-    const imagePaths = await convertPdfToImages(pdfPath);
+    // Convertir todas las páginas del PDF a imágenes
+    const converter = fromPath(pdfPath, options);
+    await converter.bulk(-1);
 
-    // Leer archivos generados
+    // Leer archivos generados y filtrar las imágenes
     const imageFiles = await fs.readdir(conversionDir);
     const pngImages = imageFiles.filter(
-      (file) => file.endsWith(".png") && file.startsWith("page_")
+      (file) => file.endsWith(".png") && file.startsWith("page")
     );
 
     // Generar URLs locales para las imágenes
@@ -81,7 +75,7 @@ app.post("/convert-pdf-to-images", async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 8004;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en puerto ${PORT}`);
 });
