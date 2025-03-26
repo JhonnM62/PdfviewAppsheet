@@ -41,12 +41,14 @@ app.post("/convert-pdf-to-images", async (req, res) => {
     await fs.writeFile(pdfPath, pdfResponse.data);
 
     // Configuración de conversión con pdf2pic
+    // Se aumenta la densidad y el ancho para obtener mejor calidad
     const options = {
-      density: 100,
+      density: 300, // Incrementa la resolución (dpi)
       saveFilename: "page",
       savePath: conversionDir,
       format: "png",
-      width: 600, // Ajusta el ancho según necesites
+      width: 1200, // Ancho mayor para mayor detalle
+      quality: 100, // Calidad máxima
     };
 
     // Convertir todas las páginas del PDF a imágenes
@@ -75,7 +77,7 @@ app.post("/convert-pdf-to-images", async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8004;
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en puerto ${PORT}`);
 });
