@@ -29,16 +29,29 @@ function convertPDFToImages(pdfPath, outputDir) {
       page: null, // Convertir todas las páginas (null)
     };
 
-    // Convertir PDF a imágenes
-    pdf2img.convert(pdfPath, options, (err, info) => {
-      if (err) {
-        console.error("Error en la conversión de PDF:", err);
-        return reject(err);
-      }
+    try {
+      // Convertir PDF a imágenes - pdf2img.convert no acepta un callback como tercer parámetro
+      // en algunas versiones, así que usamos el método correcto
+      const converter = pdf2img.convert(pdfPath, options);
 
-      // Devolver información sobre las imágenes generadas
-      resolve(info);
-    });
+      // Registrar el callback para manejar la conversión
+      converter.on("page", (page) => {
+        console.log(`Página ${page.page} convertida a ${page.name}`);
+      });
+
+      converter.on("error", (err) => {
+        console.error("Error en la conversión de PDF:", err);
+        reject(err);
+      });
+
+      converter.on("end", (info) => {
+        console.log("Conversión finalizada con éxito");
+        resolve(info);
+      });
+    } catch (error) {
+      console.error("Error al iniciar la conversión:", error);
+      reject(error);
+    }
   });
 }
 
