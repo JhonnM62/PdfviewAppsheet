@@ -4,6 +4,9 @@ FROM node:18-bullseye as bot
 # Instala poppler-utils para que pdfinfo esté disponible
 RUN apt-get update && apt-get install -y poppler-utils
 
+# Modificar la política de ImageMagick para permitir la conversión de PDFs
+RUN sed -i 's/<policy domain="coder" rights="none" pattern="PDF" \/>/<policy domain="coder" rights="read|write" pattern="PDF" \/>/' /etc/ImageMagick-6/policy.xml
+
 WORKDIR /app
 
 # Copia los archivos de tu proyecto al contenedor
