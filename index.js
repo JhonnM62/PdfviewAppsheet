@@ -36,8 +36,15 @@ app.post("/convert-pdf-to-images", async (req, res) => {
     const pdfPath = path.join(conversionDir, "original.pdf");
     await fs.writeFile(pdfPath, pdfResponse.data);
 
-    // Convertir el PDF a imágenes usando pdf-image
-    const pdfImage = new PDFImage(pdfPath, { outputDirectory: conversionDir });
+    // Configurar PDFImage con opciones para recortar bordes (-trim) y ajustar la densidad (-density)
+    const pdfImage = new PDFImage(pdfPath, {
+      outputDirectory: conversionDir,
+      convertOptions: {
+        "-density": "150", // Ajusta la densidad para mejorar la calidad
+        "-trim": "", // Recorta bordes innecesarios
+      },
+    });
+
     // Obtener el número de páginas del PDF
     const numPages = await pdfImage.numberOfPages();
 
