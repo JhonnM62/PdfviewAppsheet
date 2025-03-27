@@ -1,8 +1,8 @@
 FROM node:18-bullseye as bot
 # Establece el directorio de trabajo en el contenedor
 
-# Instala poppler-utils para que pdfinfo esté disponible
-RUN apt-get update && apt-get install -y poppler-utils
+# Actualizar repositorios e instalar dependencias
+RUN apt-get update && apt-get install -y poppler-utils imagemagick
 
 # Modificar la política de ImageMagick para permitir la conversión de PDFs
 RUN sed -i 's/<policy domain="coder" rights="none" pattern="PDF" \/>/<policy domain="coder" rights="read|write" pattern="PDF" \/>/' /etc/ImageMagick-6/policy.xml
