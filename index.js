@@ -36,12 +36,12 @@ app.post("/convert-pdf-to-images", async (req, res) => {
     const pdfPath = path.join(conversionDir, "original.pdf");
     await fs.writeFile(pdfPath, pdfResponse.data);
 
-    // Configurar PDFImage con opciones para recortar bordes (-trim) y ajustar la densidad (-density)
+    // Configurar PDFImage con opciones para reducir aún más los bordes
     const pdfImage = new PDFImage(pdfPath, {
       outputDirectory: conversionDir,
       convertOptions: {
-        "-density": "150", // Ajusta la densidad para mejorar la calidad
-        "-trim": "", // Recorta bordes innecesarios
+        "-density": "150", // Aumenta la calidad
+        "-shave": "15x15", // Recorta 10px adicionales en cada lado
       },
     });
 
@@ -59,11 +59,10 @@ app.post("/convert-pdf-to-images", async (req, res) => {
     const imageFiles = imagePaths.map((fullPath) => path.basename(fullPath));
 
     // Generar URLs locales para las imágenes
+    // Con este nuevo código:
     const localImageUrls = imageFiles.map(
       (imageName) =>
-        `${req.protocol}://${req.get(
-          "host"
-        )}/images/${conversionId}/${imageName}`
+        `https://${req.get("host")}/images/${conversionId}/${imageName}`
     );
 
     // Responder con las URLs separadas por comas
@@ -74,7 +73,7 @@ app.post("/convert-pdf-to-images", async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en puerto ${PORT}`);
 });
