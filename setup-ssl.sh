@@ -1,20 +1,25 @@
 #!/bin/bash
 
-# Detener nginx temporalmente
+# Este script debe ejecutarse después de que el contenedor esté en funcionamiento
+# y el dominio apunte correctamente al servidor
+
+# Detener Nginx temporalmente
 service nginx stop
 
-# Obtener certificados SSL con certbot
-certbot certonly --standalone -d www.autosystemprojects.site --agree-tos --email tu_email@ejemplo.com --non-interactive
+# Obtener certificado SSL con Certbot
+certbot certonly --standalone \
+  --preferred-challenges http \
+  --agree-tos \
+  --email tu_email@example.com \
+  -d www.autosystemprojects.site \
+  -d autosystemprojects.site
 
-# Copiar certificados a la ubicación apropiada
-cp /etc/letsencrypt/live/www.autosystemprojects.site/fullchain.pem /etc/nginx/ssl/
-cp /etc/letsencrypt/live/www.autosystemprojects.site/privkey.pem /etc/nginx/ssl/
+# Copiar los certificados al directorio de nginx
+cp /etc/letsencrypt/live/www.autosystemprojects.site/fullchain.pem /etc/nginx/ssl/cert.pem
+cp /etc/letsencrypt/live/www.autosystemprojects.site/privkey.pem /etc/nginx/ssl/key.pem
 
-# Configurar permisos adecuados
-chmod 644 /etc/nginx/ssl/fullchain.pem
-chmod 600 /etc/nginx/ssl/privkey.pem
-
-# Iniciar nginx nuevamente
+# Reiniciar Nginx
 service nginx start
 
-echo "Configuración SSL completada."
+# Configurar renovación automática
+echo "0 0,12 * * * root python -c 'import random; import time; time.sleep(random.random() * 3600)' && certbot renew -q && service nginx reload" | tee -a /etc/crontab > /dev/null

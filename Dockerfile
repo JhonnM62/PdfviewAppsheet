@@ -6,6 +6,7 @@ RUN apt-get update && apt-get install -y \
     ghostscript \
     imagemagick \
     nginx \
+    openssl \
     certbot \
     python3-certbot-nginx
 
@@ -20,8 +21,9 @@ COPY package*.json ./
 RUN npm install
 COPY . .
 
-# Crear directorios para certificados
+# Crear directorios necesarios
 RUN mkdir -p /etc/nginx/ssl
+RUN mkdir -p /var/www/certbot
 
 # Configurar Nginx como proxy inverso
 RUN rm /etc/nginx/sites-enabled/default
