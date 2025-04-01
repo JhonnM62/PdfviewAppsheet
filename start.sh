@@ -1,7 +1,10 @@
 #!/bin/bash
 
-# Iniciar Nginx en segundo plano
-nginx -g "daemon off;" &
+# Iniciar la aplicación Node.js en segundo plano
+node /app/index.js &
 
-# Iniciar la aplicación Node.js
-node index.js
+# Esperar un momento para que Node.js inicie
+sleep 5
+
+# Iniciar Nginx en primer plano para mantener el contenedor en ejecución
+nginx -g "daemon off;"

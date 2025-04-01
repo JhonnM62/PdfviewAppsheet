@@ -41,7 +41,7 @@ app.post("/convert-pdf-to-images", async (req, res) => {
       outputDirectory: conversionDir,
       convertOptions: {
         "-density": "150", // Aumenta la calidad
-        "-shave": "15x15", // Recorta 10px adicionales en cada lado
+        "-shave": "15x15", // Recorta 15px en cada lado
       },
     });
 
@@ -58,11 +58,10 @@ app.post("/convert-pdf-to-images", async (req, res) => {
     // Extraer nombres de archivo de las rutas completas
     const imageFiles = imagePaths.map((fullPath) => path.basename(fullPath));
 
-    // Generar URLs locales para las imágenes
-    // Con este nuevo código:
+    // Generar URLs con el dominio correcto
+    const domain = "www.autosystemprojects.site";
     const localImageUrls = imageFiles.map(
-      (imageName) =>
-        `https://${req.get("host")}/images/${conversionId}/${imageName}`
+      (imageName) => `https://${domain}/images/${conversionId}/${imageName}`
     );
 
     // Responder con las URLs separadas por comas

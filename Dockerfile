@@ -6,7 +6,8 @@ RUN apt-get update && apt-get install -y \
     ghostscript \
     imagemagick \
     nginx \
-    openssl
+    certbot \
+    python3-certbot-nginx
 
 # Modificar la política de ImageMagick para permitir la conversión de PDFs
 RUN sed -i 's/<policy domain="coder" rights="none" pattern="PDF" \/>/<policy domain="coder" rights="read|write" pattern="PDF" \/>/' /etc/ImageMagick-6/policy.xml
@@ -19,11 +20,8 @@ COPY package*.json ./
 RUN npm install
 COPY . .
 
-# Crear un certificado SSL autofirmado
+# Crear directorios para certificados
 RUN mkdir -p /etc/nginx/ssl
-RUN openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout /etc/nginx/ssl/nginx.key -out /etc/nginx/ssl/nginx.crt \
-    -subj "/C=ES/ST=State/L=City/O=Organization/CN=localhost"
 
 # Configurar Nginx como proxy inverso
 RUN rm /etc/nginx/sites-enabled/default
